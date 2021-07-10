@@ -33,7 +33,7 @@ where
             Some(first_value) => {
                 let mut tree = BTree::new(first_value);
 
-                iterable.skip(1).for_each(|item| {
+                iterable.for_each(|item| {
                     tree.insert(item);
                 });
 
@@ -43,6 +43,9 @@ where
         }
     }
 }
+
+// Rust compiler complains of this because it MAY implement Iterator on Vec
+// "sometime in the future" ¯\_(ツ)_/¯
 
 // impl<G> From<Vec<G>> for BTree<G> {
 //     fn from(vec: Vec<G>) -> Self {
@@ -229,6 +232,6 @@ mod tests {
         let vec: Vec<u8> = vec![12, 3, 5];
         let tree: BTree<&u8> = BTree::from(vec.iter());
         assert_eq!(***tree.get_root().unwrap(), 12);
-        assert_eq!(***tree.get_root().unwrap().get_left_child().unwrap(), 5);
+        assert_eq!(***tree.get_root().unwrap().get_left_child().unwrap(), 3);
     }
 }
