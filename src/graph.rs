@@ -1,7 +1,9 @@
 use std::{ops::Deref};
 
+use crate::prelude::Node;
+
 pub struct Graph<T = ()> {
-    nodes: Vec<Node<T>>
+    nodes: Vec<GraphNode<T>>
 }
 
 impl<T> Graph<T> {
@@ -11,8 +13,8 @@ impl<T> Graph<T> {
         }
     }
 
-    pub fn spawn(&mut self, value: T) -> &Node<T> {
-        let node = Node {
+    pub fn spawn(&mut self, value: T) -> &GraphNode<T> {
+        let node = GraphNode {
             value,
             edges: vec![],
             parent: self
@@ -28,24 +30,32 @@ pub struct Edge {
     weight: usize
 }
 
-pub struct Node<T> {
+pub struct GraphNode<T> {
     value: T,
     edges: Vec<Edge>,
     parent: *const Graph<T>,
 }
 
-impl<T> Node<T> {
-    pub fn get_parent(&self) -> &Graph<T> {
-        unsafe {
-            &*self.parent
-        }
+impl<T> Node for GraphNode<T> {
+    type Output = T;
+
+    fn value(&self) -> &Self::Output {
+        &self.value
     }
 }
 
-impl<T> Deref for Node<T> {
+impl<T> Deref for GraphNode<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
         &self.value
+    }
+}
+
+impl<T> GraphNode<T> {
+    pub fn get_parent(&self) -> &Graph<T> {
+        unsafe {
+            &*self.parent
+        }
     }
 }

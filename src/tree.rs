@@ -1,11 +1,12 @@
 use std::ops::Deref;
+use crate::prelude::Node;
 
 pub trait NodeValue {}
 
 impl<T: Sized> NodeValue for T {}
 
 pub struct BTree<T> {
-    root: Option<Node<T>>,
+    root: Option<BTreeNode<T>>,
 }
 
 impl<T> BTree<T> {
@@ -15,11 +16,11 @@ impl<T> BTree<T> {
 
     pub fn new(root: T) -> Self {
         Self {
-            root: Some(Node::new(root)),
+            root: Some(BTreeNode::new(root)),
         }
     }
 
-    pub fn get_root(&self) -> Option<&Node<T>> {
+    pub fn get_root(&self) -> Option<&BTreeNode<T>> {
         self.root.as_ref()
     }
 }
@@ -64,8 +65,8 @@ where
 
 impl<T: PartialOrd + Clone> BTree<T> {
     pub fn insert(&mut self, value: T) {
-        let mut current: &mut Node<T> = &mut self.root.as_mut().unwrap();
-        let mut parent: *mut Node<T>;
+        let mut current: &mut BTreeNode<T> = &mut self.root.as_mut().unwrap();
+        let mut parent: *mut BTreeNode<T>;
 
         loop {
             parent = current.as_ptr_mut();
@@ -73,7 +74,7 @@ impl<T: PartialOrd + Clone> BTree<T> {
             unsafe {
                 deref = parent.as_mut().unwrap();
             }
-            if value < *deref.get_value() {
+            if value < *deref.value() {
                 // Go to the left of the tree
                 let left_node = current.get_left_child_mut();
                 match left_node {
@@ -104,7 +105,7 @@ impl<T: PartialOrd + Clone> BTree<T> {
         }
     }
 
-    pub fn remove(&mut self, _node: &Node<T>) {
+    pub fn remove(&mut self, _node: &BTreeNode<T>) {
         todo!()
     }
 }
@@ -132,27 +133,34 @@ impl<T: PartialOrd + Clone> BTree<T> {
 //     }
 // }
 
-pub struct Node<T: NodeValue> {
+pub struct BTreeNode<T: NodeValue> {
     value: T,
-    left: Option<Box<Node<T>>>,
-    right: Option<Box<Node<T>>>,
+    left: Option<Box<BTreeNode<T>>>,
+    right: Option<Box<BTreeNode<T>>>,
 }
 
-impl<T> PartialEq for Node<T> {
+impl<T> Node for BTreeNode<T> {
+    type Output = T;
+    fn value(&self) -> &T {
+        &self.value
+    }
+}
+
+impl<T> PartialEq for BTreeNode<T> {
     fn eq(&self, other: &Self) -> bool {
         std::ptr::eq(self, other)
     }
 }
 
-impl<T: NodeValue> Deref for Node<T> {
+impl<T: NodeValue> Deref for BTreeNode<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.value
+        &self.value()
     }
 }
 
-impl<T: NodeValue> Node<T> {
+impl<T: NodeValue> BTreeNode<T> {
     fn new(value: T) -> Self {
         Self {
             value,
@@ -161,45 +169,41 @@ impl<T: NodeValue> Node<T> {
         }
     }
 
-    pub fn as_ptr(&self) -> *const Node<T> {
-        self as *const Node<T>
+    pub fn as_ptr(&self) -> *const BTreeNode<T> {
+        self as *const BTreeNode<T>
     }
 
-    pub fn as_ptr_mut(&mut self) -> *mut Node<T> {
-        self as *mut Node<T>
-    }
-
-    pub fn get_value(&self) -> &T {
-        &self.value
+    pub fn as_ptr_mut(&mut self) -> *mut BTreeNode<T> {
+        self as *mut BTreeNode<T>
     }
 
     fn set_left_child(&mut self, value: T) {
-        self.left = Some(Box::new(Node::new(value)))
+        self.left = Some(Box::new(BTreeNode::new(value)))
     }
 
     fn set_right_child(&mut self, value: T) {
-        self.right = Some(Box::new(Node::new(value)))
+        self.right = Some(Box::new(BTreeNode::new(value)))
     }
 
-    pub fn get_left_child(&self) -> Option<&Node<T>> {
+    pub fn get_left_child(&self) -> Option<&BTreeNode<T>> {
         match self.left.as_ref() {
             Some(v) => Some(v),
             None => None,
         }
     }
 
-    fn get_left_child_mut(&mut self) -> Option<&mut Box<Node<T>>> {
+    fn get_left_child_mut(&mut self) -> Option<&mut Box<BTreeNode<T>>> {
         self.left.as_mut()
     }
 
-    pub fn get_right_child(&self) -> Option<&Node<T>> {
+    pub fn get_right_child(&self) -> Option<&BTreeNode<T>> {
         match self.right.as_ref() {
             Some(v) => Some(v),
             None => None,
         }
     }
 
-    fn get_right_child_mut(&mut self) -> Option<&mut Box<Node<T>>> {
+    fn get_right_child_mut(&mut self) -> Option<&mut Box<BTreeNode<T>>> {
         self.right.as_mut()
     }
 }
