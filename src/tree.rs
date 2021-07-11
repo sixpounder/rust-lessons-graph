@@ -1,6 +1,12 @@
 use std::ops::Deref;
 use crate::prelude::Node;
 
+pub enum DFTOrder {
+    InOrder,
+    PreOrder,
+    PostOrder
+}
+
 pub trait NodeValue {}
 
 impl<T: Sized> NodeValue for T {}
@@ -20,8 +26,29 @@ impl<T> BTree<T> {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.root.is_none()
+    }
+
     pub fn get_root(&self) -> Option<&BTreeNode<T>> {
         self.root.as_ref()
+    }
+
+    /// Creates a depth first traversal iterator on this tree, with an *in odrder*
+    /// traversal algorythm
+    pub fn iter_depth(&self) -> BTreeDFTIterator<T> {
+        BTreeDFTIterator::new(self.get_root())
+    }
+
+    /// Creates a depth first traversal iterator on this tree with the specified traverse
+    /// order algorythm
+    pub fn iter_depth_order(&self, order: DFTOrder) -> BTreeDFTIterator<T> {
+        BTreeDFTIterator::new_with_order(self.get_root(), order)
+    }
+
+    /// Creates a breadth first iterator on this tree
+    pub fn iter_breadth(&self) -> BTreeDFTIterator<T> {
+        todo!()
     }
 }
 
@@ -110,28 +137,40 @@ impl<T: PartialOrd + Clone> BTree<T> {
     }
 }
 
-// pub enum TreeIterMode {
-//     DepthFirst,
-//     BreadthFirst,
-// }
+/// Implements a Depth First Traversal for a given binary tree
+pub struct BTreeDFTIterator<'a, T> {
+    order: DFTOrder,
+    root: Option<&'a BTreeNode<T>>,
+    next: Option<&'a BTreeNode<T>>,
+}
 
-// pub struct TreeDFTIterator<'a, T> {
-//     tree: &'a BTree<T>,
-//     root: &'a Node<T>,
-//     next: Option<&'a Node<T>>,
-// }
+impl<'a, T> BTreeDFTIterator<'a, T> {
+    pub fn new(root: Option<&'a BTreeNode<T>>) -> Self {
+        Self {
+            root,
+            next: None,
+            order: DFTOrder::InOrder
+        }
+    }
 
-// impl<'a, T> TreeDFTIterator<'a, T> {
-//     pub fn visit(&self, node: Node<T>) {}
-// }
+    pub fn new_with_order(root: Option<&'a BTreeNode<T>>, order: DFTOrder) -> Self {
+        Self {
+            root,
+            next: None,
+            order
+        }
+    }
 
-// impl<'a, T> Iterator for TreeDFTIterator<'a, T> {
-//     type Item = Node<T>;
+    pub fn visit(&self, node: BTreeNode<T>) {}
+}
 
-//     fn next(&mut self) -> Option<Self::Item> {
-//         todo!()
-//     }
-// }
+impl<'a, T> Iterator for BTreeDFTIterator<'a, T> {
+    type Item = BTreeNode<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        todo!()
+    }
+}
 
 pub struct BTreeNode<T: NodeValue> {
     value: T,
