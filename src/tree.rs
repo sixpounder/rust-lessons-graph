@@ -1,11 +1,5 @@
+use crate::prelude::{DFTOrder, Node, Traversable};
 use std::ops::Deref;
-use crate::prelude::Node;
-
-pub enum DFTOrder {
-    InOrder,
-    PreOrder,
-    PostOrder
-}
 
 pub trait NodeValue {}
 
@@ -36,19 +30,44 @@ impl<T> BTree<T> {
 
     /// Creates a depth first traversal iterator on this tree, with an *in odrder*
     /// traversal algorythm
-    pub fn iter_depth(&self) -> BTreeDFTIterator<T> {
-        BTreeDFTIterator::new(self.get_root())
+    pub fn iter_depth(&self) -> BTreeInOrderIterator<T> {
+        BTreeInOrderIterator::new(self.get_root())
     }
 
-    /// Creates a depth first traversal iterator on this tree with the specified traverse
-    /// order algorythm
-    pub fn iter_depth_order(&self, order: DFTOrder) -> BTreeDFTIterator<T> {
-        BTreeDFTIterator::new_with_order(self.get_root(), order)
+    /// Creates a depth first traversal iterator on this tree with the specified traversing
+    /// order algorithm
+    pub fn iter_depth_order<'a>(
+        &'a self,
+        order: DFTOrder,
+    ) -> Box<dyn Iterator<Item = &BTreeNode<T>> + 'a> {
+        match order {
+            DFTOrder::InOrder => Box::new(BTreeInOrderIterator::new(self.get_root())),
+            DFTOrder::PreOrder => todo!(),
+            DFTOrder::PostOrder => todo!(),
+        }
     }
 
     /// Creates a breadth first iterator on this tree
-    pub fn iter_breadth(&self) -> BTreeDFTIterator<T> {
+    pub fn iter_breadth(&self) {
         todo!()
+    }
+}
+
+impl<T> Traversable<T> for BTree<T> {
+    fn traverse<F>(&self, order: DFTOrder, f: &F)
+    where
+        F: Fn(&T),
+    {
+        match self.get_root() {
+            Some(root) => {
+                match order {
+                    DFTOrder::InOrder => root.visit_in_order(f),
+                    DFTOrder::PreOrder => root.visit_pre_order(f),
+                    DFTOrder::PostOrder => root.visit_post_order(f),
+                };
+            }
+            None => (),
+        }
     }
 }
 
@@ -137,38 +156,38 @@ impl<T: PartialOrd + Clone> BTree<T> {
     }
 }
 
-/// Implements a Depth First Traversal for a given binary tree
-pub struct BTreeDFTIterator<'a, T> {
-    order: DFTOrder,
-    root: Option<&'a BTreeNode<T>>,
-    next: Option<&'a BTreeNode<T>>,
+pub struct BTreeInOrderIterator<'a, T> {
+    stack: Vec<&'a BTreeNode<T>>,
 }
 
-impl<'a, T> BTreeDFTIterator<'a, T> {
+impl<'a, T> BTreeInOrderIterator<'a, T> {
     pub fn new(root: Option<&'a BTreeNode<T>>) -> Self {
-        Self {
-            root,
-            next: None,
-            order: DFTOrder::InOrder
+        match root {
+            Some(node) => Self { stack: vec![node] },
+            None => Self { stack: vec![] },
         }
     }
-
-    pub fn new_with_order(root: Option<&'a BTreeNode<T>>, order: DFTOrder) -> Self {
-        Self {
-            root,
-            next: None,
-            order
-        }
-    }
-
-    pub fn visit(&self, node: BTreeNode<T>) {}
 }
 
-impl<'a, T> Iterator for BTreeDFTIterator<'a, T> {
-    type Item = BTreeNode<T>;
+impl<'a, T> Iterator for BTreeInOrderIterator<'a, T> {
+    type Item = &'a BTreeNode<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        let current_returnable_node = self.stack.pop();
+        match current_returnable_node {
+            Some(popped_node) => {
+                if let Some(right) = popped_node.get_right_child() {
+                    self.stack.push(right);
+                }
+
+                if let Some(left) = popped_node.get_left_child() {
+                    self.stack.push(left);
+                }
+            }
+            None => (),
+        }
+
+        current_returnable_node
     }
 }
 
@@ -245,6 +264,70 @@ impl<T: NodeValue> BTreeNode<T> {
     fn get_right_child_mut(&mut self) -> Option<&mut Box<BTreeNode<T>>> {
         self.right.as_mut()
     }
+
+    fn visit_in_order<F>(&self, f: &F)
+    where
+        F: Fn(&T),
+    {
+        match self.get_left_child() {
+            Some(left_child) => left_child.visit_in_order(f),
+            None => (),
+        }
+
+        f(self);
+
+        match self.get_right_child() {
+            Some(right_child) => right_child.visit_in_order(f),
+            None => (),
+        }
+    }
+
+    fn visit_pre_order<F>(&self, f: &F)
+    where
+        F: Fn(&T),
+    {
+        f(self);
+
+        match self.get_left_child() {
+            Some(left_child) => left_child.visit_pre_order(f),
+            None => (),
+        }
+
+        match self.get_right_child() {
+            Some(right_child) => right_child.visit_pre_order(f),
+            None => (),
+        }
+    }
+
+    fn visit_post_order<F>(&self, f: &F)
+    where
+        F: Fn(&T),
+    {
+        match self.get_left_child() {
+            Some(left_child) => left_child.visit_post_order(f),
+            None => (),
+        }
+
+        match self.get_right_child() {
+            Some(right_child) => right_child.visit_post_order(f),
+            None => (),
+        }
+
+        f(self);
+    }
+}
+
+impl<T> Traversable<T> for BTreeNode<T> {
+    fn traverse<F>(&self, order: DFTOrder, f: &F)
+    where
+        F: Fn(&T),
+    {
+        match order {
+            DFTOrder::InOrder => self.visit_in_order(f),
+            DFTOrder::PreOrder => self.visit_pre_order(f),
+            DFTOrder::PostOrder => self.visit_post_order(f),
+        };
+    }
 }
 
 #[cfg(test)]
@@ -276,5 +359,17 @@ mod tests {
         let tree: BTree<&u8> = BTree::from(vec.iter());
         assert_eq!(***tree.get_root().unwrap(), 12);
         assert_eq!(***tree.get_root().unwrap().get_left_child().unwrap(), 3);
+    }
+
+    #[test]
+    fn in_order_iter() {
+        let vec: Vec<u8> = vec![12, 15, 3, 5];
+        let tree: BTree<&u8> = BTree::from(vec.iter());
+        let out_vec = tree.iter_depth().collect::<Vec<&BTreeNode<&u8>>>();
+        assert_eq!(out_vec.len(), 4);
+        assert_eq!(**out_vec[0], &12u8);
+        assert_eq!(**out_vec[1], &3u8);
+        assert_eq!(**out_vec[2], &5u8);
+        assert_eq!(**out_vec[3], &15u8);
     }
 }
