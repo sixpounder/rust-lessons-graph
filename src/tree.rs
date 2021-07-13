@@ -42,8 +42,8 @@ impl<T> BTree<T> {
     ) -> Box<dyn Iterator<Item = &BTreeNode<T>> + 'a> {
         match order {
             DFTOrder::InOrder => Box::new(BTreeInOrderIterator::new(self.get_root())),
-            DFTOrder::PreOrder => todo!(),
-            DFTOrder::PostOrder => todo!(),
+            DFTOrder::PreOrder => Box::new(BTreePreOrderIterator::new(self.get_root())),
+            DFTOrder::PostOrder => Box::new(BTreePostOrderIterator::new(self.get_root())),
         }
     }
 
@@ -173,8 +173,29 @@ impl<'a, T> Iterator for BTreeInOrderIterator<'a, T> {
     type Item = &'a BTreeNode<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let current_returnable_node = self.stack.pop();
-        match current_returnable_node {
+        todo!()
+    }
+}
+
+pub struct BTreePreOrderIterator<'a, T> {
+    stack: Vec<&'a BTreeNode<T>>,
+}
+
+impl<'a, T> BTreePreOrderIterator<'a, T> {
+    pub fn new(root: Option<&'a BTreeNode<T>>) -> Self {
+        match root {
+            Some(node) => Self { stack: vec![node] },
+            None => Self { stack: vec![] },
+        }
+    }
+}
+
+impl<'a, T> Iterator for BTreePreOrderIterator<'a, T> {
+    type Item = &'a BTreeNode<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.stack.pop();
+        match next {
             Some(popped_node) => {
                 if let Some(right) = popped_node.get_right_child() {
                     self.stack.push(right);
@@ -187,7 +208,28 @@ impl<'a, T> Iterator for BTreeInOrderIterator<'a, T> {
             None => (),
         }
 
-        current_returnable_node
+        next
+    }
+}
+
+pub struct BTreePostOrderIterator<'a, T> {
+    stack: Vec<&'a BTreeNode<T>>,
+}
+
+impl<'a, T> BTreePostOrderIterator<'a, T> {
+    pub fn new(root: Option<&'a BTreeNode<T>>) -> Self {
+        match root {
+            Some(node) => Self { stack: vec![node] },
+            None => Self { stack: vec![] },
+        }
+    }
+}
+
+impl<'a, T> Iterator for BTreePostOrderIterator<'a, T> {
+    type Item = &'a BTreeNode<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        todo!()
     }
 }
 
