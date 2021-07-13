@@ -5,6 +5,7 @@ pub trait NodeValue {}
 
 impl<T: Sized> NodeValue for T {}
 
+/// Implements a binary tree
 pub struct BTree<T> {
     root: Option<BTreeNode<T>>,
 }
@@ -91,26 +92,13 @@ where
     }
 }
 
-// Rust compiler complains of this because it MAY implement Iterator on Vec
-// "sometime in the future" ¯\_(ツ)_/¯
-
-// impl<G> From<Vec<G>> for BTree<G> {
-//     fn from(vec: Vec<G>) -> Self {
-//         if vec.len() == 0 {
-//             BTree::empty()
-//         } else {
-//             let mut tree = BTree::new(vec[0]);
-//             vec.iter().skip(1).for_each(|item| {
-//                 tree.insert(item);
-//             });
-
-//             tree
-//         }
-//     }
-// }
-
-impl<T: PartialOrd + Clone> BTree<T> {
+impl<T: PartialOrd> BTree<T> {
     pub fn insert(&mut self, value: T) {
+        if self.root.is_none() {
+            self.root.as_mut().unwrap().value = value;
+            return;
+        }
+
         let mut current: &mut BTreeNode<T> = &mut self.root.as_mut().unwrap();
         let mut parent: *mut BTreeNode<T>;
 
@@ -130,7 +118,7 @@ impl<T: PartialOrd + Clone> BTree<T> {
                     }
                     None => {
                         // Insert to the left
-                        deref.set_left_child(value.clone());
+                        deref.set_left_child(value);
                         break;
                     }
                 }
@@ -143,7 +131,7 @@ impl<T: PartialOrd + Clone> BTree<T> {
                         continue;
                     }
                     None => {
-                        deref.set_right_child(value.clone());
+                        deref.set_right_child(value);
                         break;
                     }
                 }
