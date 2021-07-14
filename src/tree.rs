@@ -145,14 +145,21 @@ impl<T: PartialOrd> BTree<T> {
 }
 
 pub struct BTreeInOrderIterator<'a, T> {
+    next: Option<&'a BTreeNode<T>>,
     stack: Vec<&'a BTreeNode<T>>,
 }
 
 impl<'a, T> BTreeInOrderIterator<'a, T> {
     pub fn new(root: Option<&'a BTreeNode<T>>) -> Self {
         match root {
-            Some(node) => Self { stack: vec![node] },
-            None => Self { stack: vec![] },
+            Some(node) => Self {
+                next: Some(node),
+                stack: vec![],
+            },
+            None => Self {
+                next: None,
+                stack: vec![],
+            },
         }
     }
 }
@@ -161,7 +168,20 @@ impl<'a, T> Iterator for BTreeInOrderIterator<'a, T> {
     type Item = &'a BTreeNode<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        while self.next.is_some() {
+            let unwrapped_next = self.next.unwrap();
+            self.stack.push(unwrapped_next);
+            self.next = unwrapped_next.get_left_child();
+        }
+
+        if self.stack.is_empty() {
+            return self.next;
+        } else {
+            let last_current = self.stack.pop().unwrap(); // unwrap because stack is certainly NOT empty
+            self.next = last_current.get_right_child();
+
+            Some(last_current)
+        }
     }
 }
 
@@ -201,14 +221,17 @@ impl<'a, T> Iterator for BTreePreOrderIterator<'a, T> {
 }
 
 pub struct BTreePostOrderIterator<'a, T> {
+    root: Option<&'a BTreeNode<T>>,
+    next: Option<&'a BTreeNode<T>>,
     stack: Vec<&'a BTreeNode<T>>,
 }
 
 impl<'a, T> BTreePostOrderIterator<'a, T> {
     pub fn new(root: Option<&'a BTreeNode<T>>) -> Self {
-        match root {
-            Some(node) => Self { stack: vec![node] },
-            None => Self { stack: vec![] },
+        Self {
+            root,
+            next: root,
+            stack: vec![],
         }
     }
 }
@@ -396,6 +419,18 @@ mod tests {
         let vec: Vec<u8> = vec![12, 15, 3, 5];
         let tree: BTree<&u8> = BTree::from(vec.iter());
         let out_vec = tree.iter_depth().collect::<Vec<&BTreeNode<&u8>>>();
+        assert_eq!(out_vec.len(), 4);
+        assert_eq!(**out_vec[0], &3u8);
+        assert_eq!(**out_vec[1], &5u8);
+        assert_eq!(**out_vec[2], &12u8);
+        assert_eq!(**out_vec[3], &15u8);
+    }
+
+    #[test]
+    fn pre_order_iter() {
+        let vec: Vec<u8> = vec![12, 15, 3, 5];
+        let tree: BTree<&u8> = BTree::from(vec.iter());
+        let out_vec = tree.iter_depth_order(DFTOrder::PreOrder).collect::<Vec<&BTreeNode<&u8>>>();
         assert_eq!(out_vec.len(), 4);
         assert_eq!(**out_vec[0], &12u8);
         assert_eq!(**out_vec[1], &3u8);
