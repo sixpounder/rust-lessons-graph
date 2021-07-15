@@ -223,15 +223,17 @@ impl<'a, T> Iterator for BTreePreOrderIterator<'a, T> {
 pub struct BTreePostOrderIterator<'a, T> {
     root: Option<&'a BTreeNode<T>>,
     next: Option<&'a BTreeNode<T>>,
-    stack: Vec<&'a BTreeNode<T>>,
+    stack1: Vec<&'a BTreeNode<T>>,
+    stack2: Vec<&'a BTreeNode<T>>,
 }
 
 impl<'a, T> BTreePostOrderIterator<'a, T> {
     pub fn new(root: Option<&'a BTreeNode<T>>) -> Self {
         Self {
             root,
-            next: root,
-            stack: vec![],
+            next: None,
+            stack1: vec![root.unwrap()],
+            stack2: vec![],
         }
     }
 }
@@ -240,7 +242,27 @@ impl<'a, T> Iterator for BTreePostOrderIterator<'a, T> {
     type Item = &'a BTreeNode<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        if self.root.is_none() {
+            None
+        } else {
+            self.next = self.stack1.pop();
+            self.stack2.push(self.next.unwrap());
+
+            match self.next.unwrap().get_left_child() {
+                Some(left_node) => {
+                    self.stack1.push(left_node);
+                },
+                None => (),
+            }
+            match self.next.unwrap().get_right_child() {
+                Some(right_node) => {
+                    self.stack1.push(right_node);
+                },
+                None => (),
+            }
+
+            self.next
+        }
     }
 }
 
@@ -431,6 +453,18 @@ mod tests {
         let vec: Vec<u8> = vec![12, 15, 3, 5];
         let tree: BTree<&u8> = BTree::from(vec.iter());
         let out_vec = tree.iter_depth_order(DFTOrder::PreOrder).collect::<Vec<&BTreeNode<&u8>>>();
+        assert_eq!(out_vec.len(), 4);
+        assert_eq!(**out_vec[0], &12u8);
+        assert_eq!(**out_vec[1], &3u8);
+        assert_eq!(**out_vec[2], &5u8);
+        assert_eq!(**out_vec[3], &15u8);
+    }
+
+    #[test]
+    fn post_order_iter() {
+        let vec: Vec<u8> = vec![12, 15, 3, 5];
+        let tree: BTree<&u8> = BTree::from(vec.iter());
+        let out_vec = tree.iter_depth_order(DFTOrder::PostOrder).collect::<Vec<&BTreeNode<&u8>>>();
         assert_eq!(out_vec.len(), 4);
         assert_eq!(**out_vec[0], &12u8);
         assert_eq!(**out_vec[1], &3u8);
