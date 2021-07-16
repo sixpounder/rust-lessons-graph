@@ -7,6 +7,8 @@ pub struct LinkedList<T> {
 }
 
 impl<T> LinkedList<T> {
+
+    /// Initializes an empty list 
     pub fn empty() -> Self {
         let assumed_init;
         unsafe {
@@ -19,6 +21,7 @@ impl<T> LinkedList<T> {
         }
     }
 
+    /// Creates a new list with its head set to `value`
     pub fn new(value: T) -> Self {
         Self {
             value: value,
@@ -27,6 +30,7 @@ impl<T> LinkedList<T> {
         }
     }
 
+    /// The head of the list
     pub fn head(&self) -> Option<&T> {
         if self.is_empty() {
             None
@@ -35,14 +39,17 @@ impl<T> LinkedList<T> {
         }
     }
 
+    /// Returns `true` if the list is empty
     pub fn is_empty(&self) -> bool {
         return self.size == 0
     }
 
+    /// The size of the list
     pub fn len(&self) -> usize {
         self.size
     }
 
+    /// All of the list but its first item (its head)
     pub fn tail(&self) -> Option<&LinkedList<T>> {
         let pointee = self.next.as_ref();
         match pointee {
@@ -51,6 +58,7 @@ impl<T> LinkedList<T> {
         }
     }
 
+    /// Same as `tail` but returns a mutable reference to the tail of the list
     pub fn tail_mut(&mut self) -> Option<&mut LinkedList<T>> {
         let pointee = self.next.as_mut();
         match pointee {
@@ -59,12 +67,17 @@ impl<T> LinkedList<T> {
         }
     }
 
-    pub fn last(&self) -> &T {
-        let mut current = self;
-        while current.next.is_some() {
-            current = current.next.as_ref().unwrap();
+    /// The last element of the list
+    pub fn last(&self) -> Option<&T> {
+        if self.is_empty() {
+            None
+        } else {
+            let mut current = self;
+            while current.next.is_some() {
+                current = current.next.as_ref().unwrap();
+            }
+            Some(current)
         }
-        current
     }
 
     pub fn nth(&self, idx: usize) -> Option<&T> {
@@ -87,27 +100,36 @@ impl<T> LinkedList<T> {
         }
     }
 
-    fn inner_last_mut(&mut self) -> &mut LinkedList<T> {
-        let mut current = self;
-
-        while current.next.is_some() {
-            current = current.next.as_mut().unwrap();
+    fn inner_last_mut(&mut self) -> Option<&mut LinkedList<T>> {
+        if self.is_empty() {
+            None
+        } else {
+            let mut current = self;
+    
+            while current.next.is_some() {
+                current = current.next.as_mut().unwrap();
+            }
+    
+            Some(&mut *current)
         }
-
-        &mut *current
     }
 
-    pub fn last_mut(&mut self) -> &mut T {
-        self.inner_last_mut()
+    pub fn last_mut(&mut self) -> Option<&mut T> {
+        match self.inner_last_mut() {
+            Some(l) => {
+                Some(&mut *l)
+            },
+            None => None
+        }
     }
 
     pub fn append(&mut self, value: T) {
         if self.is_empty() {
             self.value = value;
         } else {
-            let mut last = self.inner_last_mut();
+            let last = self.inner_last_mut();
             let new_list = LinkedList::new(value);
-            last.next = Some(Box::new(new_list));
+            last.unwrap().next = Some(Box::new(new_list));
         }
         self.size += 1;
     }
@@ -251,7 +273,7 @@ mod tests {
     #[test]
     fn last_equal_head() {
         let list = LinkedList::new(1);
-        assert_eq!(*list.last(), 1i32);
+        assert_eq!(list.last(), Some(&1i32));
     }
 
     #[test]
@@ -291,6 +313,6 @@ mod tests {
     fn append() {
         let list = make_test_list();
         assert_eq!(list.len(), 3);
-        assert_eq!(*list.last(), 3);
+        assert_eq!(list.last(), Some(&3));
     }
 }
