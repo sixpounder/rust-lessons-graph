@@ -81,23 +81,7 @@ impl<T> LinkedList<T> {
     }
 
     pub fn nth(&self, idx: usize) -> Option<&T> {
-        if self.is_empty() {
-            return None;
-        }
-
-        let mut current = self;
-        let mut i = idx;
-        while current.next.is_some() && i > 0 {
-            current = current.next.as_ref().unwrap();
-            i -= 1;
-        }
-
-        if i == 0 {
-            // Not found
-            None
-        } else {
-            Some(current)
-        }
+        self.iter().nth(idx)
     }
 
     fn inner_last_mut(&mut self) -> Option<&mut LinkedList<T>> {
@@ -191,7 +175,11 @@ pub struct LinkedListIterator<'a, T> {
 
 impl<'a, T> LinkedListIterator<'a, T> {
     pub fn new(list: &'a LinkedList<T>) -> Self {
-        Self { ptr: Some(list) }
+        if list.is_empty() {
+            Self { ptr: None }
+        } else {
+            Self { ptr: Some(list) }
+        }
     }
 }
 
@@ -219,7 +207,11 @@ pub struct LinkedListIteratorMut<'a, T> {
 
 impl<'a, T> LinkedListIteratorMut<'a, T> {
     pub fn new(list: &mut LinkedList<T>) -> Self {
-        Self { ptr: list, marker: PhantomData }
+        if list.is_empty() {
+            Self { ptr: std::ptr::null_mut(), marker: PhantomData }
+        } else {
+            Self { ptr: list, marker: PhantomData }
+        }
     }
 }
 
@@ -286,6 +278,18 @@ mod tests {
     fn iter_one() {
         let list = LinkedList::new(1);
         assert_eq!(list.iter().count(), 1);
+    }
+
+    #[test]
+    fn iter_empty() {
+        let list: LinkedList<u8> = LinkedList::empty();
+        assert_eq!(list.iter().count(), 0);
+    }
+
+    #[test]
+    fn iter_mut_empty() {
+        let mut list: LinkedList<u8> = LinkedList::empty();
+        assert_eq!(list.iter_mut().count(), 0);
     }
 
     #[test]
