@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, ops::{Deref, DerefMut}, usize};
+use std::{iter::FromIterator, marker::PhantomData, ops::{Deref, DerefMut, Index}, usize};
 
 pub struct LinkedList<T> {
     value: T,
@@ -7,16 +7,36 @@ pub struct LinkedList<T> {
 }
 
 impl<T> LinkedList<T> {
+    pub fn empty() -> Self {
+        let assumed_init;
+        unsafe {
+            assumed_init = std::mem::zeroed::<T>();
+        }
+        Self {
+            value: assumed_init,
+            next: None,
+            size: 0
+        }
+    }
+
     pub fn new(value: T) -> Self {
         Self {
-            value,
+            value: value,
             next: None,
             size: 1,
         }
     }
 
-    pub fn head(&self) -> &T {
-        &self.value
+    pub fn head(&self) -> Option<&T> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(&self.value)
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        return self.size == 0
     }
 
     pub fn len(&self) -> usize {
@@ -47,7 +67,11 @@ impl<T> LinkedList<T> {
         current
     }
 
-    pub fn nth(&self, idx: usize) -> Option<&LinkedList<T>> {
+    pub fn nth(&self, idx: usize) -> Option<&T> {
+        if self.is_empty() {
+            return None;
+        }
+
         let mut current = self;
         let mut i = idx;
         while current.next.is_some() && i > 0 {
@@ -78,9 +102,13 @@ impl<T> LinkedList<T> {
     }
 
     pub fn append(&mut self, value: T) {
-        let mut last = self.inner_last_mut();
-        let new_list = LinkedList::new(value);
-        last.next = Some(Box::new(new_list));
+        if self.is_empty() {
+            self.value = value;
+        } else {
+            let mut last = self.inner_last_mut();
+            let new_list = LinkedList::new(value);
+            last.next = Some(Box::new(new_list));
+        }
         self.size += 1;
     }
 
@@ -90,6 +118,18 @@ impl<T> LinkedList<T> {
 
     pub fn iter_mut(&mut self) -> LinkedListIteratorMut<T> {
         LinkedListIteratorMut::new(self)
+    }
+}
+
+impl<T> FromIterator<T> for LinkedList<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let mut list: LinkedList<T> = LinkedList::empty();
+
+        for i in iter {
+            list.append(i);
+        }
+
+        list
     }
 }
 
@@ -110,6 +150,14 @@ impl<T> DerefMut for LinkedList<T> {
 impl<T> AsMut<T> for LinkedList<T> {
     fn as_mut(&mut self) -> &mut T {
         &mut self.value
+    }
+}
+
+impl<T> Index<usize> for LinkedList<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.nth(index).as_ref().unwrap()
     }
 }
 
@@ -197,13 +245,19 @@ mod tests {
     #[test]
     fn create() {
         let list = LinkedList::new(1);
-        assert_eq!(*list.head(), 1);
+        assert_eq!(list.head(), Some(&1));
     }
 
     #[test]
     fn last_equal_head() {
         let list = LinkedList::new(1);
         assert_eq!(*list.last(), 1i32);
+    }
+
+    #[test]
+    fn nth() {
+        let list = make_test_list();
+        assert_eq!(list.nth(0), Some(&1));
     }
 
     #[test]
@@ -222,6 +276,15 @@ mod tests {
     fn iter_mut() {
         let mut list = make_test_list();
         assert_eq!(list.iter_mut().count(), 3);
+    }
+
+    #[test]
+    fn from_iter() {
+        let it = (0..5).into_iter();
+        let list = LinkedList::from_iter(it);
+        assert_eq!(list.len(), 5);
+        assert_eq!(list.head(), Some(&0));
+        assert_eq!(*list.iter().last().unwrap(), 4);
     }
 
     #[test]
