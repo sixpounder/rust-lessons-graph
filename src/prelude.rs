@@ -1,3 +1,8 @@
+#[derive(Debug, PartialEq)]
+pub enum Order {
+    Ascending,
+    Descending
+}
 pub enum DFTOrder {
     InOrder,
     PreOrder,
@@ -11,4 +16,8 @@ pub trait Node {
 
 pub trait Traversable<T> {
     fn traverse<F>(&self, order: DFTOrder, f: &F) where F: Fn(&T);
+}
+
+pub trait Sortable {
+    fn sort(self, order: Order) -> Self;
 }

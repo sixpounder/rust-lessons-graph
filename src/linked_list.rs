@@ -1,5 +1,7 @@
 use std::{iter::FromIterator, marker::PhantomData, ops::{Deref, DerefMut, Index}, usize};
 
+use crate::prelude::{Order, Sortable};
+
 pub struct LinkedList<T> {
     value: T,
     next: Option<Box<LinkedList<T>>>,
@@ -139,6 +141,19 @@ impl<T> FromIterator<T> for LinkedList<T> {
     }
 }
 
+impl<G: Iterator> From<G> for LinkedList<<G as Iterator>::Item>
+where
+    <G as Iterator>::Item: PartialOrd + Clone,
+{
+    fn from(iterable: G) -> Self {
+        let mut list: LinkedList<<G as Iterator>::Item> = LinkedList::empty();
+        for i in iterable {
+            list.append(i);
+        }
+        list
+    }
+}
+
 impl<T> Deref for LinkedList<T> {
     type Target = T;
 
@@ -244,6 +259,24 @@ impl<'a, T> Iterator for LinkedListIteratorMut<'a, T> {
     }
 }
 
+impl<T: Ord + Copy> Sortable for LinkedList<T> {
+    fn sort(self, order: crate::prelude::Order) -> Self {
+        let mut v = self.iter().map(|i| *i).collect::<Vec<T>>();
+        v.sort();
+
+        if order == Order::Descending {
+            v.reverse();
+        }
+
+        let mut list: LinkedList<T> = LinkedList::empty();
+        for i in v.iter() {
+            list.append(*i);
+        }
+
+        list
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -258,8 +291,9 @@ mod tests {
 
     #[test]
     fn create() {
-        let list = LinkedList::new(1);
+        let list: LinkedList<u8> = LinkedList::new(1);
         assert_eq!(list.head(), Some(&1));
+        assert!(list.tail().is_none());
     }
 
     #[test]
@@ -318,5 +352,15 @@ mod tests {
         let list = make_test_list();
         assert_eq!(list.len(), 3);
         assert_eq!(list.last(), Some(&3));
+    }
+
+    #[test]
+    fn sort() {
+        let list = make_test_list();
+        let list = list.sort(Order::Descending);
+        assert_eq!(list.iter().collect::<Vec<&i32>>(), vec![&3, &2, &1]);
+
+        let list = list.sort(Order::Ascending);
+        assert_eq!(list.iter().collect::<Vec<&i32>>(), vec![&1, &2, &3]);
     }
 }
