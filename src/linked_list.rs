@@ -2,6 +2,7 @@ use std::{iter::FromIterator, marker::PhantomData, ops::{Deref, DerefMut, Index}
 
 use crate::prelude::{Order, Sortable};
 
+/// An implementation of a linked list that supports empty sets.
 pub struct LinkedList<T> {
     value: T,
     next: Option<Box<LinkedList<T>>>,
@@ -30,6 +31,14 @@ impl<T> LinkedList<T> {
             next: None,
             size: 1,
         }
+    }
+
+    pub fn as_ptr(&self) -> *const Self {
+        self as *const Self
+    }
+
+    pub fn as_ptr_mut(&mut self) -> *mut Self {
+        self as *mut Self
     }
 
     /// The head of the list
@@ -119,6 +128,65 @@ impl<T> LinkedList<T> {
         }
         self.size += 1;
     }
+
+    pub fn remove(&mut self, entry: &LinkedList<T>) {
+        if self.is_empty() {
+            return;
+        }
+
+        let mut indirect: *const LinkedList<T> = self;
+        while !indirect.is_null() && !std::ptr::eq(indirect, entry) {
+            if let Some(next) = entry.next.as_ref() {
+                indirect = &**next;
+            }
+        }
+
+        unsafe {
+            let indirect = indirect as *mut LinkedList<T>;
+            let next_ptr = entry.next.as_ref().unwrap().as_ptr();
+            *indirect = std::ptr::read(next_ptr);
+        }
+    }
+
+    // pub fn remove_index(&mut self, idx: usize) {
+    //     if self.is_empty() || idx >= self.len() {
+    //         return;
+    //     }
+
+    //     let mut i: usize = 0;
+    //     let mut indirect: *mut LinkedList<T> = self;
+    //     let mut prev = std::ptr::null_mut();
+    //     while !indirect.is_null() && i < idx {
+    //         unsafe {
+    //             if let Some(next) = (*indirect).next.as_mut() {
+    //                 prev = indirect;
+    //                 indirect = &mut **next;
+    //                 i += 1;
+    //             }
+    //         }
+    //     }
+
+    //     unsafe {
+    //         // // Redefine pointers as mutable pointers
+    //         // let indirect = indirect as *mut LinkedList<T>;
+    //         // let prev = prev as *mut LinkedList<T>;
+
+
+    //         // This point to the right side of the removable item
+    //         let next_ptr = (*indirect).next.as_ref().unwrap().as_ptr();
+
+    //         // This point to the left side
+    //         let mut prev_next = (*prev).next.as_mut().unwrap().as_ptr_mut();
+
+    //         // Link the two...
+    //         *prev_next = *next_ptr;
+
+    //         // ...and drop the removed one
+    //         std::ptr::drop_in_place(indirect);
+
+    //         self.size -= 1;
+    //     }
+    // }
 
     pub fn iter(&self) -> LinkedListIterator<T> {
         LinkedListIterator::new(self)
@@ -353,6 +421,13 @@ mod tests {
         assert_eq!(list.len(), 3);
         assert_eq!(list.last(), Some(&3));
     }
+
+    // #[test]
+    // fn remove() {
+    //     let mut list = make_test_list();
+    //     list.remove_index(1);
+    //     assert_eq!(list.len(), 2);
+    // }
 
     #[test]
     fn sort() {
