@@ -22,7 +22,7 @@ fn last_mut<T>(list: &mut LinkedList<T>) -> Option<&mut LinkedList<T>> {
 /// An implementation of a linked list that supports empty sets.
 pub struct LinkedList<T: Sized> {
     value: T,
-    next: Option<Box<LinkedList<T>>>,
+    next: Option<*const LinkedList<T>>,
     size: usize,
 }
 
@@ -87,8 +87,10 @@ impl<T> LinkedList<T> {
             None
         } else {
             match &self.next {
-                Some(boxed_next) => {
-                    Some(boxed_next.as_ref())
+                Some(next_ptr) => {
+                    unsafe {
+                        Some(&**next_ptr)
+                    }
                 },
                 None => None
             }
@@ -100,9 +102,11 @@ impl<T> LinkedList<T> {
         if self.is_empty() {
             None
         } else {
-            match &mut self.next {
+            match self.next {
                 Some(boxed_next) => {
-                    Some(boxed_next.as_mut())
+                    unsafe {
+                        Some(&mut *(boxed_next as *mut LinkedList<T>))
+                    }
                 },
                 None => None
             }
@@ -137,16 +141,6 @@ impl<T> LinkedList<T> {
             None
         } else {
             last_mut(self)
-            // while last.has_next() {
-            //     match last.next.as_mut() {
-            //         Some(next) => {
-            //             last = next.as_mut();
-            //         },
-            //         None => (),
-            //     }
-            // }
-        
-            // Some(last)
         }
     }
 
@@ -154,56 +148,72 @@ impl<T> LinkedList<T> {
         if self.is_empty() {
             self.value = value;
         } else {
-            let last = last_mut(self);
-            let new_list = LinkedList::new(value);
-            last.unwrap().next = Some(Box::new(new_list));
+            let last = last_mut(self).unwrap();
+            let layout = std::alloc::Layout::new::<LinkedList<T>>();
+            let new_list;
+            unsafe {
+                new_list = std::alloc::alloc(layout);
+                std::ptr::write(new_list as *mut LinkedList<T>, LinkedList::new(value));
+            }
+            last.next = Some(new_list as *const LinkedList<T>);
         }
         self.size += 1;
     }
 
-    pub fn remove(&mut self, entry: &LinkedList<T>) {
-        todo!()
+    pub fn remove_at(&mut self, index: usize) {
+        self.remove_at_in(index);
     }
 
-    // pub fn remove_index(&mut self, idx: usize) {
-    //     if self.is_empty() || idx >= self.len() {
-    //         return;
-    //     }
+    fn remove_at_in(&mut self, index: usize) {
+        fn assert_failed(idx: usize) {
+            panic!("Attempted to remove an item with index {}, which is out of this list bounds", idx);
+        }
 
-    //     let mut i: usize = 0;
-    //     let mut indirect: *mut LinkedList<T> = self;
-    //     let mut prev = std::ptr::null_mut();
-    //     while !indirect.is_null() && i < idx {
-    //         unsafe {
-    //             if let Some(next) = (*indirect).next.as_mut() {
-    //                 prev = indirect;
-    //                 indirect = &mut **next;
-    //                 i += 1;
-    //             }
-    //         }
-    //     }
+        let mut i = 0usize;
+        let mut indirect = self as *const LinkedList<T>;
+        let mut prev = std::ptr::null::<LinkedList<T>>();
+        if index > self.len() {
+            assert_failed(index);
+            return;
+        }
 
-    //     unsafe {
-    //         // // Redefine pointers as mutable pointers
-    //         // let indirect = indirect as *mut LinkedList<T>;
-    //         // let prev = prev as *mut LinkedList<T>;
+        while i < index {
+            let deref_indirect;
+            unsafe {
+                deref_indirect = &*indirect;
+            }
+            match deref_indirect.next {
+                Some(next) => {
+                    prev = indirect;
+                    indirect = next;
+                },
+                None => {
+                    break;
+                }
+            }
+            i += 1;
+        }
 
+        if i != index {
+            // End reached before index
+            assert_failed(index)
+        } else {
+            println!("Removing item at {:?}", indirect);
+            let deref_prev;
+            unsafe {
+                deref_prev = &mut *(prev as *mut LinkedList<T>);
+            }
 
-    //         // This point to the right side of the removable item
-    //         let next_ptr = (*indirect).next.as_ref().unwrap().as_ptr();
+            let new_next;
+            unsafe {
+                new_next = (*indirect).next.unwrap();
+            }
 
-    //         // This point to the left side
-    //         let mut prev_next = (*prev).next.as_mut().unwrap().as_ptr_mut();
+            deref_prev.next = Some(new_next);
+            self.size -= 1;
+        }
 
-    //         // Link the two...
-    //         *prev_next = *next_ptr;
-
-    //         // ...and drop the removed one
-    //         std::ptr::drop_in_place(indirect);
-
-    //         self.size -= 1;
-    //     }
-    // }
+    }
 
     pub fn iter(&self) -> LinkedListIterator<T> {
         LinkedListIterator::new(self)
@@ -386,6 +396,17 @@ mod tests {
         let list = make_test_list();
         assert_eq!(list.len(), 3);
         assert_eq!(list.last(), Some(&3));
+    }
+
+    #[test]
+    fn remove() {
+        let mut list = make_test_list();
+        list.append(4);
+        list.append(5);
+
+        list.remove_at(2);
+        assert_eq!(list.len(), 4);
+        assert_eq!(list.iter().collect::<Vec<&i32>>(), vec![&1, &2, &4, &5]);
     }
 
     #[test]
