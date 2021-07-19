@@ -161,11 +161,12 @@ impl<T> LinkedList<T> {
     }
 
     pub fn remove_at(&mut self, index: usize) {
-        self.remove_at_in(index);
+        let hole = self.remove_at_in(index);
+        drop(hole);
     }
 
-    fn remove_at_in(&mut self, index: usize) {
-        fn assert_failed(idx: usize) {
+    fn remove_at_in(&mut self, index: usize) -> Option<*const LinkedList<T>> {
+        fn assert_failed<T>(idx: usize) -> T {
             panic!("Attempted to remove an item with index {}, which is out of this list bounds", idx);
         }
 
@@ -173,8 +174,7 @@ impl<T> LinkedList<T> {
         let mut indirect = self as *const LinkedList<T>;
         let mut prev = std::ptr::null::<LinkedList<T>>();
         if index > self.len() {
-            assert_failed(index);
-            return;
+            return assert_failed(index);
         }
 
         while i < index {
@@ -209,8 +209,9 @@ impl<T> LinkedList<T> {
             }
 
             deref_prev.next = Some(new_next);
-            std::mem::drop(indirect);
             self.size -= 1;
+
+            Some(indirect)
         }
 
     }
