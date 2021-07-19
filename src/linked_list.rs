@@ -198,7 +198,6 @@ impl<T> LinkedList<T> {
             // End reached before index
             assert_failed(index)
         } else {
-            println!("Removing item at {:?}", indirect);
             let deref_prev;
             unsafe {
                 deref_prev = &mut *(prev as *mut LinkedList<T>);
@@ -210,6 +209,7 @@ impl<T> LinkedList<T> {
             }
 
             deref_prev.next = Some(new_next);
+            std::mem::drop(indirect);
             self.size -= 1;
         }
 
