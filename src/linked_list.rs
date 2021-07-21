@@ -1,4 +1,9 @@
-use std::{iter::FromIterator, marker::PhantomData, ops::{Deref, DerefMut, Index}, usize};
+use std::{
+    iter::FromIterator,
+    marker::PhantomData,
+    ops::{Deref, DerefMut, Index},
+    usize,
+};
 
 use crate::prelude::{Order, Sortable};
 
@@ -19,7 +24,46 @@ fn last_mut<T>(list: &mut LinkedList<T>) -> Option<&mut LinkedList<T>> {
     }
 }
 
+fn for_each_until_last<T, F: Fn(&mut LinkedList<T>)>(
+    list: &mut LinkedList<T>,
+    f: F,
+) -> Option<&mut LinkedList<T>> {
+    fn assert_failed<T>() -> T {
+        panic!("Cannot find last of an empty list");
+    }
+
+    if list.is_empty() {
+        assert_failed()
+    } else {
+        let mut last = list;
+        f(last);
+        while last.tail().is_some() {
+            match last.tail_mut() {
+                Some(_) => {
+                    last = last.tail_mut().unwrap();
+                    f(last);
+                },
+                None => break
+            }
+        }
+
+        Some(last)
+    }
+}
+
 /// An implementation of a linked list that supports empty sets.
+///
+/// Note that accessing the `value` of an empty list will result in
+/// undefined behaviour.
+///
+/// ## Example
+/// ```
+/// # use fluffy_structs::LinkedList;
+/// let mut list = LinkedList::new("Hello");
+/// list.append(" world");
+/// assert_eq!(list.len(), 2);
+/// list.iter().for_each(|s| println!("{}", s));
+/// ```
 pub struct LinkedList<T: Sized> {
     value: T,
     next: Option<*const LinkedList<T>>,
@@ -27,8 +71,7 @@ pub struct LinkedList<T: Sized> {
 }
 
 impl<T> LinkedList<T> {
-
-    /// Initializes an empty list 
+    /// Initializes an empty list
     pub fn empty() -> Self {
         let assumed_init_value;
         unsafe {
@@ -37,7 +80,7 @@ impl<T> LinkedList<T> {
         Self {
             value: assumed_init_value,
             next: None,
-            size: 0
+            size: 0,
         }
     }
 
@@ -69,7 +112,7 @@ impl<T> LinkedList<T> {
 
     /// Returns `true` if the list is empty
     pub fn is_empty(&self) -> bool {
-        return self.size == 0
+        return self.size == 0;
     }
 
     pub fn has_next(&self) -> bool {
@@ -87,12 +130,8 @@ impl<T> LinkedList<T> {
             None
         } else {
             match &self.next {
-                Some(next_ptr) => {
-                    unsafe {
-                        Some(&**next_ptr)
-                    }
-                },
-                None => None
+                Some(next_ptr) => unsafe { Some(&**next_ptr) },
+                None => None,
             }
         }
     }
@@ -103,12 +142,8 @@ impl<T> LinkedList<T> {
             None
         } else {
             match self.next {
-                Some(boxed_next) => {
-                    unsafe {
-                        Some(&mut *(boxed_next as *mut LinkedList<T>))
-                    }
-                },
-                None => None
+                Some(boxed_next) => unsafe { Some(&mut *(boxed_next as *mut LinkedList<T>)) },
+                None => None,
             }
         }
     }
@@ -123,8 +158,8 @@ impl<T> LinkedList<T> {
                 match last.tail() {
                     Some(boxed_next) => {
                         last = boxed_next;
-                    },
-                    None => break
+                    }
+                    None => break,
                 }
             }
 
@@ -147,8 +182,13 @@ impl<T> LinkedList<T> {
     pub fn append(&mut self, value: T) {
         if self.is_empty() {
             self.value = value;
+            self.size += 1;
         } else {
-            let last = last_mut(self).unwrap();
+            let last = for_each_until_last(
+                self, 
+                |i| { i.size += 1; }
+            ).unwrap();
+            // let last = last_mut(self).unwrap();
             let layout = std::alloc::Layout::new::<LinkedList<T>>();
             let new_list;
             unsafe {
@@ -157,7 +197,8 @@ impl<T> LinkedList<T> {
             }
             last.next = Some(new_list as *const LinkedList<T>);
         }
-        self.size += 1;
+
+        // self.size += 1;
     }
 
     pub fn remove_at(&mut self, index: usize) {
@@ -167,7 +208,10 @@ impl<T> LinkedList<T> {
 
     fn remove_at_in(&mut self, index: usize) -> Option<*const LinkedList<T>> {
         fn assert_failed<T>(idx: usize) -> T {
-            panic!("Attempted to remove an item with index {}, which is out of this list bounds", idx);
+            panic!(
+                "Attempted to remove an item with index {}, which is out of this list bounds",
+                idx
+            );
         }
 
         let mut i = 0usize;
@@ -186,7 +230,7 @@ impl<T> LinkedList<T> {
                 Some(next) => {
                     prev = indirect;
                     indirect = next;
-                },
+                }
                 None => {
                     break;
                 }
@@ -213,7 +257,6 @@ impl<T> LinkedList<T> {
 
             Some(indirect)
         }
-
     }
 
     pub fn iter(&self) -> LinkedListIterator<T> {
@@ -313,15 +356,21 @@ impl<'a, T> Iterator for LinkedListIterator<'a, T> {
 
 pub struct LinkedListIteratorMut<'a, T> {
     ptr: *mut LinkedList<T>,
-    marker: PhantomData<&'a T>
+    marker: PhantomData<&'a T>,
 }
 
 impl<'a, T> LinkedListIteratorMut<'a, T> {
     pub fn new(list: &mut LinkedList<T>) -> Self {
         if list.is_empty() {
-            Self { ptr: std::ptr::null_mut(), marker: PhantomData }
+            Self {
+                ptr: std::ptr::null_mut(),
+                marker: PhantomData,
+            }
         } else {
-            Self { ptr: list, marker: PhantomData }
+            Self {
+                ptr: list,
+                marker: PhantomData,
+            }
         }
     }
 }
@@ -337,7 +386,7 @@ impl<'a, T> Iterator for LinkedListIteratorMut<'a, T> {
                 match self.ptr.as_mut().unwrap().tail_mut() {
                     Some(next_mut) => {
                         self.ptr = next_mut;
-                    },
+                    }
                     None => {
                         self.ptr = std::ptr::null_mut();
                     }
@@ -348,9 +397,7 @@ impl<'a, T> Iterator for LinkedListIteratorMut<'a, T> {
         if value.is_null() {
             None
         } else {
-            unsafe {
-                Some(&mut *value)
-            }
+            unsafe { Some(&mut *value) }
         }
     }
 }
@@ -461,13 +508,6 @@ mod tests {
         assert_eq!(*list.iter().last().unwrap(), 4);
     }
 
-    // #[test]
-    // fn remove() {
-    //     let mut list = make_test_list();
-    //     list.remove_index(1);
-    //     assert_eq!(list.len(), 2);
-    // }
-
     #[test]
     fn sort() {
         let list = make_test_list();
@@ -476,5 +516,11 @@ mod tests {
 
         let list = list.sort(Order::Ascending);
         assert_eq!(list.iter().collect::<Vec<&i32>>(), vec![&1, &2, &3]);
+    }
+
+    #[test]
+    fn index_trait() {
+        let list = make_test_list();
+        assert_eq!(list[1], 2);
     }
 }
