@@ -215,7 +215,7 @@ impl<T> LinkedList<T> {
         }
 
         let mut i = 0usize;
-        let mut indirect = self as *const LinkedList<T>;
+        let mut indirect = self as *mut LinkedList<T>;
         let mut prev = std::ptr::null::<LinkedList<T>>();
         if index > self.len() {
             return assert_failed(index);
@@ -224,12 +224,13 @@ impl<T> LinkedList<T> {
         while i < index {
             let deref_indirect;
             unsafe {
-                deref_indirect = &*indirect;
+                deref_indirect = &mut *indirect;
             }
             match deref_indirect.next {
                 Some(next) => {
+                    deref_indirect.size -= 1;
                     prev = indirect;
-                    indirect = next;
+                    indirect = next as *mut LinkedList<T>;
                 }
                 None => {
                     break;
@@ -253,7 +254,7 @@ impl<T> LinkedList<T> {
             }
 
             deref_prev.next = Some(new_next);
-            self.size -= 1;
+            // self.size -= 1;
 
             Some(indirect)
         }
