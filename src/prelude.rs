@@ -1,3 +1,5 @@
+///# This module contains common traits and types usefull to work with the crate
+
 #[derive(Debug, PartialEq)]
 pub enum Order {
     Ascending,

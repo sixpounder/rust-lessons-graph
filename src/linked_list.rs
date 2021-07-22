@@ -53,16 +53,15 @@ fn for_each_until_last<T, F: Fn(&mut LinkedList<T>)>(
 
 /// An implementation of a linked list that supports empty sets.
 ///
-/// Note that accessing the `value` of an empty list will result in
-/// undefined behaviour.
-///
 /// ## Example
 /// ```
-/// # use fluffy_structs::LinkedList;
-/// let mut list = LinkedList::new("Hello");
-/// list.append(" world");
+/// # use fluffy_structs::{LinkedList, list};
+/// let mut list = list!("Hello", " world");
 /// assert_eq!(list.len(), 2);
+///
+/// // Print each element
 /// list.iter().for_each(|s| println!("{}", s));
+/// // "Hello world"
 /// ```
 pub struct LinkedList<T: Sized> {
     value: T,
@@ -115,6 +114,7 @@ impl<T> LinkedList<T> {
         return self.size == 0;
     }
 
+    /// If this list item has an item after it
     pub fn has_next(&self) -> bool {
         self.next.is_some()
     }
@@ -364,6 +364,7 @@ impl<'a, T> Iterator for LinkedListIterator<'a, T> {
     }
 }
 
+/// A mutable iterator over a `LinkedList`
 pub struct LinkedListIteratorMut<'a, T> {
     ptr: *mut LinkedList<T>,
     marker: PhantomData<&'a T>,

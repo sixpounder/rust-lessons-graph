@@ -1,6 +1,10 @@
 pub mod prelude;
-pub mod graph;
-pub mod tree;
+
+mod graph;
+pub use graph::*;
+
+mod tree;
+pub use tree::*;
 
 mod linked_list;
 pub use linked_list::*;
