@@ -119,7 +119,9 @@ impl<T> LinkedList<T> {
         self.next.is_some()
     }
 
-    /// The size of the list
+    /// The size of the list. For any given node in a list, `len()`
+    /// represents the size of the subsequent list include the item
+    /// it is called on.
     pub fn len(&self) -> usize {
         self.size
     }
@@ -167,10 +169,12 @@ impl<T> LinkedList<T> {
         }
     }
 
+    /// Return the element at index `idx`, if any
     pub fn nth(&self, idx: usize) -> Option<&T> {
         self.iter().nth(idx)
     }
 
+    /// Returns a mutable reference to the last item in the list
     pub fn last_mut(&mut self) -> Option<&mut LinkedList<T>> {
         if self.is_empty() {
             None
@@ -179,6 +183,7 @@ impl<T> LinkedList<T> {
         }
     }
 
+    /// Appends `value` to the list
     pub fn append(&mut self, value: T) {
         if self.is_empty() {
             self.value = value;
@@ -201,6 +206,7 @@ impl<T> LinkedList<T> {
         // self.size += 1;
     }
 
+    /// Removes the elements at position `index`
     pub fn remove_at(&mut self, index: usize) {
         let hole = self.remove_at_in(index);
         drop(hole);
@@ -260,10 +266,12 @@ impl<T> LinkedList<T> {
         }
     }
 
+    /// Returns an iterator on the list
     pub fn iter(&self) -> LinkedListIterator<T> {
         LinkedListIterator::new(self)
     }
 
+    /// Same as `iter()`, but mutable
     pub fn iter_mut(&mut self) -> LinkedListIteratorMut<T> {
         LinkedListIteratorMut::new(self)
     }
@@ -324,6 +332,7 @@ impl<T> Index<usize> for LinkedList<T> {
 
 // List iterators
 
+/// An iterator over a `LinkedList`
 pub struct LinkedListIterator<'a, T> {
     ptr: Option<&'a LinkedList<T>>,
 }
